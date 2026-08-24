@@ -28,9 +28,10 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:${{ github.run_number }},${{ secrets.DOCKERHUB_USERNAME }}/auth-service:latest
 
-      - name: Trigger Helm Charts Repo Update
-        run: |
-          curl -X POST -H "Accept: application/vnd.github.v3+json" \
-          -H "Authorization: token ${{ secrets.PAT_TOKEN }}" \
-          https://api.github.com/repos/Ejada-A/helm-charts/actions/workflows/update-image.yml/dispatches \
-          -d '{"ref":"main", "inputs": {"service": "auth-service", "image_tag": "${{ github.run_number }}"}}'
+  update-helm:
+    needs: build-and-push
+    uses: Ejada-A/helm-charts/.github/workflows/update-image.yml@main
+    with:
+      service: "auth-service"
+      image_tag: "${{ github.run_number }}"
+    secrets: inherit
