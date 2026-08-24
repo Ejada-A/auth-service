@@ -29,11 +29,12 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/auth-service:${{ github.run_number }},${{ secrets.DOCKERHUB_USERNAME }}/auth-service:latest
 
-  update-helm:
-    needs: build-and-push
-    uses: Ejada-A/helm-charts/.github/workflows/update-image.yml@main
-    with:
-      service: "auth-service"
-      image_tag: "${{ github.run_number }}"
-    secrets: inherit
+#  update-helm:
+#    needs: build-and-push
+#    uses: Ejada-A/helm-charts/.github/workflows/update-image.yml@main
+#    with:
+#      service: "auth-service"
+#      image_tag: "${{ github.run_number }}"
+#    secrets: inherit
+
 
