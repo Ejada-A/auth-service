@@ -195,6 +195,12 @@ app.post('/auth/user/login', async (req, res) => {
   }
 });
 
+// Health check endpoint for Kubernetes probes
+app.get('/health', (req, res) => {
+  return res.status(200).json({ status: 'healthy', service: 'auth-service' });
+});
+
 app.listen(PORT, () => {
   console.log(`Auth service running on port ${PORT}`);
 });
+
