@@ -16,9 +16,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Get OCI Auth Token from Vault
+      - name: Get OCI Access Token
         uses: oracle-actions/run-oci-cli-command@v1.1.1
-        id: get-auth-token
+        id: get-access-token
         env:
           OCI_CLI_USER: ${{ secrets.OCI_USER_OCID }}
           OCI_CLI_TENANCY: ${{ secrets.OCI_TENANCY_OCID }}
@@ -26,22 +26,14 @@ jobs:
           OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_KEY_CONTENT }}
           OCI_CLI_REGION: "me-jeddah-1"
         with:
-          command: 'secrets secret-bundle get --secret-id ${{ secrets.VAULT_OCIR_AUTH_TOKEN_OCID }}'
-          query: 'data."secret-bundle-content".content'
-
-      - name: Decode Auth Token
-        id: decode-token
-        run: |
-          TOKEN=$(echo '${{ steps.get-auth-token.outputs.raw_output }}' | base64 --decode)
-          echo "::add-mask::$TOKEN"
-          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          command: "container-registry access-token get --query 'data.\"access-token\"' --raw-output"
 
       - name: Login to OCI Registry
         uses: docker/login-action@v3
         with:
           registry: jed.ocir.io
-          username: axkjllkftxfz/${{ secrets.OCI_IDENTITY_DOMAIN }}/${{ secrets.OCI_USER_EMAIL }}
-          password: ${{ steps.decode-token.outputs.token }}
+          username: BEARER_TOKEN
+          password: ${{ steps.get-access-token.outputs.raw_output }}
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
