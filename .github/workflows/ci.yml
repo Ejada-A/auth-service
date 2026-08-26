@@ -16,19 +16,38 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Get OCI Access Token
+        uses: oracle-actions/run-oci-cli-command@v1.1.1
+        id: get-access-token
+        env:
+          OCI_CLI_USER: ${{ secrets.OCI_USER_OCID }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_KEY_CONTENT }}
+          OCI_CLI_REGION: "me-jeddah-1"
+        with:
+          command: 'container-registry access-token get'
+
+      - name: Parse Access Token
+        id: parse-token
+        run: |
+          TOKEN=$(echo '${{ steps.get-access-token.outputs.output }}' | jq -r '.data."access-token"')
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
       - name: Login to OCI Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.OCI_REGISTRY }}
-          username: ${{ secrets.OCI_USERNAME }}
-          password: ${{ secrets.OCI_PASSWORD }}
+          registry: jed.ocir.io
+          username: BEARER_TOKEN
+          password: ${{ steps.parse-token.outputs.token }}
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ secrets.OCI_REGISTRY }}/${{ secrets.OCI_NAMESPACE }}/auth-service:${{ github.run_number }},${{ secrets.OCI_REGISTRY }}/${{ secrets.OCI_NAMESPACE }}/auth-service:latest
+          tags: jed.ocir.io/axkjllkftxfz/shared-group-a-cmp/auth-service:${{ github.run_number }},jed.ocir.io/axkjllkftxfz/shared-group-a-cmp/auth-service:latest
 
   update-helm:
     needs: build-and-push
