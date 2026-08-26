@@ -40,16 +40,10 @@ jobs:
           echo "${OCI_CLI_KEY_CONTENT}" > ~/.oci/key.pem
           chmod 600 ~/.oci/key.pem
           
-          TOKEN=$(oci container-registry access-token get --query 'data.token' --raw-output)
-          echo "::add-mask::$TOKEN"
-          echo "token=$TOKEN" >> $GITHUB_OUTPUT
-
-      - name: Login to OCI Registry
-        uses: docker/login-action@v3
-        with:
-          registry: jed.ocir.io
-          username: BEARER_TOKEN
-          password: ${{ steps.get-access-token.outputs.raw_output }}
+          OCIR_ACCESS_TOKEN=$(oci container-registry access-token get --query 'data."access-token"' --raw-output)
+          echo "::add-mask::$OCIR_ACCESS_TOKEN"
+          
+          printf '%s' "$OCIR_ACCESS_TOKEN" | docker login jed.ocir.io -u BEARER_TOKEN --password-stdin
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
