@@ -27,20 +27,14 @@ jobs:
           OCI_CLI_REGION: "me-jeddah-1"
         with:
           command: 'container-registry access-token get'
-
-      - name: Parse Access Token
-        id: parse-token
-        run: |
-          TOKEN=$(echo '${{ steps.get-access-token.outputs.output }}' | jq -r '.data."access-token"')
-          echo "::add-mask::$TOKEN"
-          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          query: 'data."access-token"'
 
       - name: Login to OCI Registry
         uses: docker/login-action@v3
         with:
           registry: jed.ocir.io
           username: BEARER_TOKEN
-          password: ${{ steps.parse-token.outputs.token }}
+          password: ${{ steps.get-access-token.outputs.raw_output }}
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
