@@ -40,7 +40,7 @@ jobs:
           echo "${OCI_CLI_KEY_CONTENT}" > ~/.oci/key.pem
           chmod 600 ~/.oci/key.pem
           
-          TOKEN=$(oci container-registry access-token get --query 'data."access-token"' --raw-output)
+          TOKEN=$(oci container-registry access-token get --query 'data.token' --raw-output)
           echo "::add-mask::$TOKEN"
           echo "token=$TOKEN" >> $GITHUB_OUTPUT
 
