@@ -10,13 +10,29 @@ import { User } from './user.model';
 dotenv.config();
 dotenv.config({ path: '../../.env' });
 
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 const app = express();
-app.use(cors());
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
 const PORT = process.env.PORT || 5001;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce';
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
+
+// Shared password policy for admin & user registration
+function validatePassword(password: unknown): string | null {
+  if (typeof password !== 'string' || password.length < 8) {
+    return 'Password must be at least 8 characters';
+  }
+  if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+    return 'Password must contain at least one letter and one number';
+  }
+  return null;
+}
 
 // Connect to MongoDB & Auto-Seed Default Admin
 mongoose.connect(MONGODB_URI)
@@ -52,6 +68,11 @@ app.post('/auth/admin/register', async (req, res) => {
     const { email, password, name } = req.body;
     if (!email || !password || !name) {
       return res.status(400).json({ success: false, error: 'Email, password, and name are required' });
+    }
+
+    const pwError = validatePassword(password);
+    if (pwError) {
+      return res.status(400).json({ success: false, error: pwError });
     }
 
     const existingAdmin = await Admin.findOne({ email });
@@ -132,6 +153,11 @@ app.post('/auth/user/register', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email, password, and name are required' });
     }
 
+    const pwError = validatePassword(password);
+    if (pwError) {
+      return res.status(400).json({ success: false, error: pwError });
+    }
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ success: false, error: 'User already exists' });
@@ -180,9 +206,18 @@ app.post('/auth/user/login', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
 
+    // Issue a JWT so the frontend can persist the user session (same scheme as admin login)
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const token = await new SignJWT({ id: user._id.toString(), email: user.email, role: 'user' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('1d')
+      .sign(secret);
+
     return res.status(200).json({
       success: true,
       message: 'Logged in successfully',
+      token,
       user: {
         id: user._id,
         email: user.email,
@@ -195,12 +230,6 @@ app.post('/auth/user/login', async (req, res) => {
   }
 });
 
-// Health check endpoint for Kubernetes probes
-app.get('/health', (req, res) => {
-  return res.status(200).json({ status: 'healthy', service: 'auth-service' });
-});
-
 app.listen(PORT, () => {
   console.log(`Auth service running on port ${PORT}`);
 });
-
